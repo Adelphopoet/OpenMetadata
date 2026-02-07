@@ -22,6 +22,7 @@
         "Metabase",
         "PowerBI",
         "PowerBIReportServer",
+        "DataLens",
         "Mode",
         "CustomDashboard",
         "DomoDashboard",
@@ -56,6 +57,9 @@
         },
         {
           "name": "PowerBIReportServer"
+        },
+        {
+          "name": "DataLens"
         },
         {
           "name": "Mode"
@@ -117,6 +121,9 @@
             },
             {
               "$ref": "./connections/dashboard/powerBIReportServerConnection.json"
+            },
+            {
+              "$ref": "./connections/dashboard/dataLensConnection.json"
             },
             {
               "$ref": "./connections/dashboard/redashConnection.json"

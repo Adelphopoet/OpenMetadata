@@ -187,6 +187,8 @@ export interface DashboardConnection {
  *
  * PowerBIReportServer Connection Config
  *
+ * DataLens Connection Config
+ *
  * Redash Connection Config
  *
  * Superset Connection Config
@@ -263,6 +265,8 @@ export interface Connection {
      *
      * Dashboard URL for PowerBI Report Server.
      *
+     * Base URL for the DataLens UI (optional, used for source links).
+     *
      * URL for the Redash instance
      *
      * URL for the superset instance.
@@ -338,6 +342,8 @@ export interface Connection {
     /**
      * API URL to call powerbi rest apis to extract metadata. Default to
      * `https://api.powerbi.com`. You can provide youw own in case of different environment
+     *
+     * DataLens API base URL.
      */
     apiURL?: string;
     /**
@@ -373,14 +379,8 @@ export interface Connection {
      */
     webPortalVirtualDirectory?: string;
     /**
-     * Version of the Redash instance
-     */
-    redashVersion?: string;
-    /**
-     * Choose between API or database connection fetch metadata from superset.
-     */
-    connection?: SupersetConnection;
-    /**
+     * DataLens API version header.
+     *
      * Tableau API version. If not provided, the version will be used from the tableau server.
      *
      * Sigma API version.
@@ -388,6 +388,32 @@ export interface Connection {
      * ThoughtSpot API version to use
      */
     apiVersion?: string;
+    /**
+     * IAM token for DataLens API access.
+     */
+    iamToken?: string;
+    /**
+     * Organization ID for DataLens API access.
+     */
+    organizationId?: string;
+    /**
+     * Page size for pagination in API requests. Default is 100.
+     */
+    pageSize?: number;
+    /**
+     * Boolean marking if we need to verify the SSL certs for DataLens. Default to True.
+     *
+     * Boolean marking if we need to verify the SSL certs for Grafana. Default to True.
+     */
+    verifySSL?: boolean | VerifySSL;
+    /**
+     * Version of the Redash instance
+     */
+    redashVersion?: string;
+    /**
+     * Choose between API or database connection fetch metadata from superset.
+     */
+    connection?: SupersetConnection;
     /**
      * Types of methods used to authenticate to the tableau instance
      */
@@ -406,10 +432,6 @@ export interface Connection {
      */
     siteName?:  string;
     sslConfig?: CertificatesSSLConfig;
-    /**
-     * Boolean marking if we need to verify the SSL certs for Grafana. Default to True.
-     */
-    verifySSL?: boolean | VerifySSL;
     /**
      * Access Token for Mode Dashboard
      *
@@ -518,10 +540,6 @@ export interface Connection {
      * only.
      */
     orgId?: string;
-    /**
-     * Page size for pagination in API requests. Default is 100.
-     */
-    pageSize?: number;
     /**
      * Whether to import Hex project categories as OpenMetadata tags
      */
@@ -1357,6 +1375,8 @@ export enum TokenType {
  *
  * PowerBIReportServer service type
  *
+ * DataLens service type
+ *
  * Redash service type
  *
  * Superset service type
@@ -1394,6 +1414,7 @@ export enum TokenType {
  */
 export enum DashboardServiceType {
     CustomDashboard = "CustomDashboard",
+    DataLens = "DataLens",
     DomoDashboard = "DomoDashboard",
     Grafana = "Grafana",
     Hex = "Hex",

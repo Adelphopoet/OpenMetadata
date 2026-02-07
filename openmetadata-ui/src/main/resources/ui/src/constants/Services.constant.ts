@@ -541,6 +541,7 @@ export const SERVICE_TYPE_WITH_DISPLAY_NAME = new Map<string, string>([
   [PipelineServiceType.GluePipeline, 'Glue Pipeline'],
   [DatabaseServiceType.DomoDatabase, 'Domo Database'],
   [DashboardServiceType.DomoDashboard, 'Domo Dashboard'],
+  [DashboardServiceType.DataLens, 'DataLens'],
   [DashboardServiceType.MicroStrategy, 'Micro Strategy'],
   [DashboardServiceType.PowerBIReportServer, 'PowerBI Report Server'],
   [PipelineServiceType.DatabricksPipeline, 'Databricks Pipeline'],

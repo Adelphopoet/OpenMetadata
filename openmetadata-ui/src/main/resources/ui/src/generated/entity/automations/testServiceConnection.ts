@@ -182,6 +182,8 @@ export interface TestServiceConnectionConnection {
  *
  * PowerBIReportServer Connection Config
  *
+ * DataLens Connection Config
+ *
  * Redash Connection Config
  *
  * Superset Connection Config
@@ -482,6 +484,8 @@ export interface ConfigObject {
      * Dashboard URL for PowerBI service.
      *
      * Dashboard URL for PowerBI Report Server.
+     *
+     * Base URL for the DataLens UI (optional, used for source links).
      *
      * URL for the Redash instance
      *
@@ -1077,6 +1081,8 @@ export interface ConfigObject {
     /**
      * Salesforce Organization ID is the unique identifier for your Salesforce identity
      *
+     * Organization ID for DataLens API access.
+     *
      * Snowplow BDP Organization ID
      *
      * Anypoint Platform Organization ID. If not provided, the connector will use the user's
@@ -1315,6 +1321,8 @@ export interface ConfigObject {
      */
     paginationLimit?: number;
     /**
+     * Boolean marking if we need to verify the SSL certs for DataLens. Default to True.
+     *
      * Boolean marking if we need to verify the SSL certs for Grafana. Default to True.
      *
      * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
@@ -1397,6 +1405,8 @@ export interface ConfigObject {
     /**
      * API URL to call powerbi rest apis to extract metadata. Default to
      * `https://api.powerbi.com`. You can provide youw own in case of different environment
+     *
+     * DataLens API base URL.
      */
     apiURL?: string;
     /**
@@ -1428,10 +1438,8 @@ export interface ConfigObject {
      */
     webPortalVirtualDirectory?: string;
     /**
-     * Version of the Redash instance
-     */
-    redashVersion?: string;
-    /**
+     * DataLens API version header.
+     *
      * Tableau API version. If not provided, the version will be used from the tableau server.
      *
      * Sigma API version.
@@ -1443,6 +1451,18 @@ export interface ConfigObject {
      * OpenMetadata server API version to use.
      */
     apiVersion?: string;
+    /**
+     * IAM token for DataLens API access.
+     */
+    iamToken?: string;
+    /**
+     * Page size for pagination in API requests. Default is 100.
+     */
+    pageSize?: number;
+    /**
+     * Version of the Redash instance
+     */
+    redashVersion?: string;
     /**
      * Proxy URL for the tableau server. If not provided, the hostPort will be used. This is
      * used to generate the dashboard & Chart URL.
@@ -1536,10 +1556,6 @@ export interface ConfigObject {
      * only.
      */
     orgId?: string;
-    /**
-     * Page size for pagination in API requests. Default is 100.
-     */
-    pageSize?: number;
     /**
      * Whether to import Hex project categories as OpenMetadata tags
      *
@@ -4431,6 +4447,8 @@ export enum TokenType {
  *
  * PowerBIReportServer service type
  *
+ * DataLens service type
+ *
  * Redash service type
  *
  * Superset service type
@@ -4531,6 +4549,7 @@ export enum ConfigType {
     DBTCloud = "DBTCloud",
     Dagster = "Dagster",
     DataFactory = "DataFactory",
+    DataLens = "DataLens",
     Databricks = "Databricks",
     DatabricksPipeline = "DatabricksPipeline",
     Datalake = "Datalake",
