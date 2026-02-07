@@ -18,6 +18,7 @@ from metadata.generated.schema.api.data.createChart import CreateChartRequest
 from metadata.generated.schema.api.data.createDashboard import CreateDashboardRequest
 from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
 from metadata.generated.schema.entity.data.chart import Chart, ChartType
+from metadata.generated.schema.entity.data.dashboard import Dashboard as LineageDashboard
 from metadata.generated.schema.entity.services.connections.dashboard.dataLensConnection import (
     DataLensConnection,
 )
@@ -216,7 +217,57 @@ class DataLensSource(DashboardServiceSource):
     def yield_dashboard_lineage_details(
         self, dashboard_details: Any, db_service_prefix: Optional[str] = None
     ) -> Iterable[Either[AddLineageRequest]]:
-        return []
+        entry = self._get_entry(dashboard_details)
+        dashboard_name = entry.get("entryId") or entry.get("savedId")
+        if not dashboard_name:
+            return []
+
+        try:
+            dashboard_fqn = fqn.build(
+                self.metadata,
+                entity_type=LineageDashboard,
+                service_name=self.context.get().dashboard_service,
+                dashboard_name=dashboard_name,
+            )
+            dashboard_entity = self.metadata.get_by_name(
+                entity=LineageDashboard, fqn=dashboard_fqn
+            )
+            if not dashboard_entity:
+                return []
+
+            for chart in self.context.get().charts or []:
+                try:
+                    chart_fqn = fqn.build(
+                        self.metadata,
+                        entity_type=Chart,
+                        service_name=self.context.get().dashboard_service,
+                        chart_name=chart,
+                    )
+                    chart_entity = self.metadata.get_by_name(
+                        entity=Chart, fqn=chart_fqn
+                    )
+                    if chart_entity:
+                        lineage = self._get_add_lineage_request(
+                            to_entity=dashboard_entity, from_entity=chart_entity
+                        )
+                        if lineage:
+                            yield lineage
+                except Exception as exc:
+                    yield Either(
+                        left=StackTraceError(
+                            name="Lineage",
+                            error=f"Error linking chart lineage {chart}: {exc}",
+                            stackTrace=traceback.format_exc(),
+                        )
+                    )
+        except Exception as exc:
+            yield Either(
+                left=StackTraceError(
+                    name="Lineage",
+                    error=f"Error extracting lineage: {exc}",
+                    stackTrace=traceback.format_exc(),
+                )
+            )
 
     def get_project_name(self, dashboard_details: dict) -> Optional[str]:
         entry = self._get_entry(dashboard_details)

@@ -53,7 +53,19 @@ export interface DataLensConnection {
     /**
      * Regex to exclude or include projects that matches the pattern.
      */
-    projectFilterPattern?:       FilterPattern;
+    projectFilterPattern?: FilterPattern;
+    /**
+     * Maximum retries after rate limit responses.
+     */
+    rateLimitMaxRetries?: number;
+    /**
+     * Delay before retrying after a rate limit response.
+     */
+    rateLimitRetrySeconds?: number;
+    /**
+     * Minimum delay between API requests to avoid rate limiting.
+     */
+    requestDelaySeconds?:        number;
     supportsMetadataExtraction?: boolean;
     /**
      * Service Type

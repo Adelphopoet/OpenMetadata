@@ -12,9 +12,10 @@
 REST client for DataLens
 """
 
+import time
 from typing import Dict, Iterable, Optional
 
-from metadata.ingestion.ometa.client import ClientConfig, REST
+from metadata.ingestion.ometa.client import ClientConfig, LimitsException, REST
 from metadata.utils.helpers import clean_uri
 from metadata.utils.logger import utils_logger
 
@@ -34,9 +35,16 @@ class DataLensApiClient:
         api_version: str = "1",
         verify_ssl: Optional[bool] = True,
         page_size: int = 100,
+        request_delay_seconds: float = 0.0,
+        rate_limit_retry_seconds: int = 60,
+        rate_limit_max_retries: int = 3,
         timeout: Optional[int] = None,
     ):
         self.page_size = page_size
+        self.request_delay_seconds = max(0.0, request_delay_seconds)
+        self.rate_limit_retry_seconds = max(1, rate_limit_retry_seconds)
+        self.rate_limit_max_retries = max(0, rate_limit_max_retries)
+        self._last_request_ts: Optional[float] = None
         self.client = REST(
             ClientConfig(
                 base_url=clean_uri(api_url),
@@ -52,6 +60,39 @@ class DataLensApiClient:
                 timeout=timeout,
             )
         )
+
+    def _sleep_if_needed(self) -> None:
+        if self.request_delay_seconds <= 0:
+            return
+        now = time.monotonic()
+        if self._last_request_ts is not None:
+            elapsed = now - self._last_request_ts
+            remaining = self.request_delay_seconds - elapsed
+            if remaining > 0:
+                time.sleep(remaining)
+        self._last_request_ts = time.monotonic()
+
+    def _post(self, path: str, payload: Dict) -> Dict:
+        retries_left = self.rate_limit_max_retries
+        while True:
+            self._sleep_if_needed()
+            try:
+                return self.client.post(path, json=payload) or {}
+            except LimitsException:
+                try:
+                    self.client._limits_reached.delete(path)
+                except Exception:
+                    pass
+                if retries_left <= 0:
+                    raise
+                logger.warning(
+                    "Rate limit hit for %s. Sleeping %ss (retries left: %s)",
+                    path,
+                    self.rate_limit_retry_seconds,
+                    retries_left,
+                )
+                time.sleep(self.rate_limit_retry_seconds)
+                retries_left -= 1
 
     def list_entries(
         self,
@@ -70,7 +111,7 @@ class DataLensApiClient:
             "includeData": include_data,
             "includePermissionsInfo": False,
         }
-        return self.client.post("/getEntries", json=payload) or {}
+        return self._post("/getEntries", payload)
 
     def list_dashboards(self) -> Iterable[Dict]:
         """Iterate dashboard entries."""
@@ -98,7 +139,7 @@ class DataLensApiClient:
             "branch": branch,
             "includeLinks": True,
         }
-        return self.client.post("/getDashboard", json=payload) or {}
+        return self._post("/getDashboard", payload)
 
     def test_connection(self) -> Dict:
         """Simple connectivity test."""

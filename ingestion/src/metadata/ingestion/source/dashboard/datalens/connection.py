@@ -37,6 +37,9 @@ def get_connection(connection: DataLensConnection) -> DataLensApiClient:
         api_version=connection.apiVersion or "1",
         verify_ssl=connection.verifySSL if connection.verifySSL is not None else True,
         page_size=connection.pageSize or 100,
+        request_delay_seconds=getattr(connection, "requestDelaySeconds", 0.2),
+        rate_limit_retry_seconds=getattr(connection, "rateLimitRetrySeconds", 60),
+        rate_limit_max_retries=getattr(connection, "rateLimitMaxRetries", 3),
     )
 
 

@@ -58,6 +58,27 @@
       "default": 100,
       "minimum": 1
     },
+    "requestDelaySeconds": {
+      "title": "Request Delay (seconds)",
+      "description": "Minimum delay between API requests to avoid rate limiting.",
+      "type": "number",
+      "default": 0.2,
+      "minimum": 0
+    },
+    "rateLimitRetrySeconds": {
+      "title": "Rate Limit Retry (seconds)",
+      "description": "Delay before retrying after a rate limit response.",
+      "type": "integer",
+      "default": 60,
+      "minimum": 1
+    },
+    "rateLimitMaxRetries": {
+      "title": "Rate Limit Max Retries",
+      "description": "Maximum retries after rate limit responses.",
+      "type": "integer",
+      "default": 3,
+      "minimum": 0
+    },
     "verifySSL": {
       "title": "Verify SSL",
       "description": "Boolean marking if we need to verify the SSL certs for DataLens. Default to True.",

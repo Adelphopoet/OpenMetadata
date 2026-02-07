@@ -401,6 +401,18 @@ export interface Connection {
      */
     pageSize?: number;
     /**
+     * Maximum retries after rate limit responses.
+     */
+    rateLimitMaxRetries?: number;
+    /**
+     * Delay before retrying after a rate limit response.
+     */
+    rateLimitRetrySeconds?: number;
+    /**
+     * Minimum delay between API requests to avoid rate limiting.
+     */
+    requestDelaySeconds?: number;
+    /**
      * Boolean marking if we need to verify the SSL certs for DataLens. Default to True.
      *
      * Boolean marking if we need to verify the SSL certs for Grafana. Default to True.
