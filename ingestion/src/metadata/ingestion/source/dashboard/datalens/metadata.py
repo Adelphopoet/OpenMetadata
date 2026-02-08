@@ -447,20 +447,39 @@ class DataLensSource(DashboardServiceSource):
             else entry.get("collectionTitle")
         )
         workbook_title = entry.get("workbookTitle")
-        if not workbook_title:
-            workbook_id = entry.get("workbookId")
+        workbook_id = entry.get("workbookId")
+        if workbook_id and (not workbook_title or not collection_path):
             workbook = self.workbooks_by_id.get(workbook_id)
+            if not workbook:
+                try:
+                    workbook = self.client.get_workbook(workbook_id)
+                    if workbook:
+                        self.workbooks_by_id[workbook_id] = workbook
+                except Exception as exc:
+                    logger.debug(traceback.format_exc())
+                    logger.warning("Failed to fetch workbook %s: %s", workbook_id, exc)
+                    workbook = None
             if workbook:
-                workbook_title = workbook.get("title")
+                if not workbook_title:
+                    workbook_title = workbook.get("title")
                 if not collection_path and workbook.get("collectionId"):
                     collection_path = self._get_collection_path(
                         workbook.get("collectionId")
                     )
-            else:
-                workbook_title = self._get_workbook_title(workbook_id)
+        if not workbook_title and workbook_id:
+            workbook_title = self._get_workbook_title(workbook_id)
         if collection_path and workbook_title:
             return f"{collection_path} / {workbook_title}"
         return collection_path or workbook_title
+
+    @staticmethod
+    def _clean_dashboard_display_name(display_name: str) -> str:
+        if not display_name:
+            return display_name
+        parts = display_name.split("/", 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            return parts[1].strip() or display_name
+        return display_name
 
     def _get_source_url(self, entry: dict) -> Optional[SourceUrl]:
         links = entry.get("links") or {}
@@ -481,6 +500,7 @@ class DataLensSource(DashboardServiceSource):
             entry = self._get_entry(dashboard_details)
             dashboard_name = entry.get("entryId") or entry.get("savedId")
             display_name = entry.get("key") or dashboard_name
+            display_name = self._clean_dashboard_display_name(display_name)
 
             if filter_by_dashboard(
                 self.source_config.dashboardFilterPattern, display_name
