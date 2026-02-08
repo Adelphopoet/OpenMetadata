@@ -89,6 +89,8 @@ class DataLensSource(DashboardServiceSource):
         self.collection_path_cache: Dict[str, str] = {}
         self._dashboard_entries_by_id: Dict[str, dict] = {}
         self._collection_name_pattern: Optional[str] = None
+        self._only_dashboards_in_collections: bool = False
+        self._collection_scoped: bool = False
 
     @classmethod
     def create(
@@ -122,7 +124,13 @@ class DataLensSource(DashboardServiceSource):
         }
 
         self._collection_name_pattern = self._get_collection_name_pattern()
-        if self._collection_name_pattern:
+        self._only_dashboards_in_collections = (
+            self._get_only_dashboards_in_collections()
+        )
+        self._collection_scoped = bool(
+            self._collection_name_pattern or self._only_dashboards_in_collections
+        )
+        if self._collection_scoped:
             self.source_config.markDeletedDashboards = False
             self.source_config.markDeletedDataModels = False
             self._prefetch_scoped_workbooks_collections()
@@ -145,6 +153,12 @@ class DataLensSource(DashboardServiceSource):
         except Exception:
             return None
         return pattern or None
+
+    def _get_only_dashboards_in_collections(self) -> bool:
+        value = getattr(self.service_connection, "onlyDashboardsInCollections", None)
+        if value is None:
+            return False
+        return bool(value)
 
     def _prefetch_scoped_workbooks_collections(self) -> None:
         workbook_ids: Set[str] = set()
@@ -210,7 +224,7 @@ class DataLensSource(DashboardServiceSource):
         if not self.source_config.includeDataModels:
             return
         try:
-            if self._collection_name_pattern:
+            if self._collection_scoped:
                 self.dataset_entries = self._load_datasets_from_relations()
             else:
                 self.dataset_entries = list(self.client.list_datasets())
@@ -364,9 +378,6 @@ class DataLensSource(DashboardServiceSource):
         return None
 
     def _collection_name_matches(self, entry: dict) -> bool:
-        if not self._collection_name_pattern:
-            return True
-        pattern = self._collection_name_pattern.lower()
         collection_id = self._get_collection_id_from_entry(entry)
         collection_title = entry.get("collectionTitle")
         if not collection_title and collection_id:
@@ -374,6 +385,12 @@ class DataLensSource(DashboardServiceSource):
         collection_path = (
             self._get_collection_path(collection_id) if collection_id else None
         )
+        has_collection = bool(collection_id or collection_title or collection_path)
+        if self._only_dashboards_in_collections and not has_collection:
+            return False
+        if not self._collection_name_pattern:
+            return True
+        pattern = self._collection_name_pattern.lower()
         for value in (collection_title, collection_path):
             if value and pattern in value.lower():
                 return True

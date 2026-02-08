@@ -63,6 +63,12 @@
       "description": "Substring match for collection name. When set, only dashboards from matching collections are ingested.",
       "type": "string"
     },
+    "onlyDashboardsInCollections": {
+      "title": "Only Dashboards In Collections",
+      "description": "When enabled, ingest only dashboards that belong to a collection (directly or via workbook).",
+      "type": "boolean",
+      "default": false
+    },
     "requestDelaySeconds": {
       "title": "Request Delay (seconds)",
       "description": "Minimum delay between API requests to avoid rate limiting.",

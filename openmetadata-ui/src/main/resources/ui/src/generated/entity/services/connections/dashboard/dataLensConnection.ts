@@ -27,6 +27,10 @@ export interface DataLensConnection {
      */
     chartFilterPattern?: FilterPattern;
     /**
+     * Substring match for collection name. When set, only dashboards from matching collections are ingested.
+     */
+    collectionNamePattern?: string;
+    /**
      * Regex to exclude or include dashboards that matches the pattern.
      */
     dashboardFilterPattern?: FilterPattern;
@@ -51,9 +55,9 @@ export interface DataLensConnection {
      */
     pageSize?: number;
     /**
-     * Limit the number of dashboards ingested. Set to 0 to disable the limit.
+     * When enabled, ingest only dashboards that belong to a collection (directly or via workbook).
      */
-    dashboardLimit?: number;
+    onlyDashboardsInCollections?: boolean;
     /**
      * Regex to exclude or include projects that matches the pattern.
      */
