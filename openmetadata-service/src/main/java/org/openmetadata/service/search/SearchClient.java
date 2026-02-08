@@ -237,16 +237,25 @@ public interface SearchClient
                   """;
 
   String REMOVE_LINEAGE_SCRIPT =
-      "ctx._source.upstreamLineage.removeIf(lineage -> lineage.docUniqueId == params.docUniqueId)";
+      """
+      if (ctx._source.upstreamLineage != null) {
+        ctx._source.upstreamLineage.removeIf(lineage -> lineage.docUniqueId == params.docUniqueId);
+      }
+      """;
 
   String REMOVE_ENTITY_RELATIONSHIP =
       "ctx._source.upstreamEntityRelationship.removeIf(relationship -> relationship.docId == params.docId)";
 
   String ADD_UPDATE_LINEAGE =
       """
+      if (ctx._source.upstreamLineage == null) {
+        ctx._source.upstreamLineage = [];
+      }
+      def incomingDocId = params.lineageData.docUniqueId;
       boolean docIdExists = false;
       for (int i = 0; i < ctx._source.upstreamLineage.size(); i++) {
-        if (ctx._source.upstreamLineage[i].docUniqueId.equalsIgnoreCase(params.lineageData.docUniqueId)) {
+        def existingDocId = ctx._source.upstreamLineage[i].docUniqueId;
+        if (existingDocId != null && incomingDocId != null && existingDocId.equalsIgnoreCase(incomingDocId)) {
           ctx._source.upstreamLineage[i] = params.lineageData;
           docIdExists = true;
           break;

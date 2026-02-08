@@ -51,6 +51,10 @@ export interface DataLensConnection {
      */
     pageSize?: number;
     /**
+     * Limit the number of dashboards ingested. Set to 0 to disable the limit.
+     */
+    dashboardLimit?: number;
+    /**
      * Regex to exclude or include projects that matches the pattern.
      */
     projectFilterPattern?: FilterPattern;

@@ -58,6 +58,11 @@
       "default": 100,
       "minimum": 1
     },
+    "collectionNamePattern": {
+      "title": "Collection Name Pattern",
+      "description": "Substring match for collection name. When set, only dashboards from matching collections are ingested.",
+      "type": "string"
+    },
     "requestDelaySeconds": {
       "title": "Request Delay (seconds)",
       "description": "Minimum delay between API requests to avoid rate limiting.",

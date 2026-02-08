@@ -882,6 +882,7 @@ export interface HistogramClass {
  * This schema defines the type used for describing different types of data models.
  */
 export enum DataModelType {
+    DataLensDataset = "DataLensDataset",
     LookMlExplore = "LookMlExplore",
     LookMlView = "LookMlView",
     MetabaseDataModel = "MetabaseDataModel",
