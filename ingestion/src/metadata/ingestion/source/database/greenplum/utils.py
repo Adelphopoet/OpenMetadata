@@ -14,6 +14,7 @@
 Greenplum SQLAlchemy util methods
 """
 import re
+from collections import defaultdict
 from typing import Dict, Tuple
 
 from sqlalchemy import sql, util
@@ -23,9 +24,9 @@ from sqlalchemy.sql import sqltypes
 
 from metadata.ingestion.source.database.greenplum.queries import (
     GREENPLUM_COL_IDENTITY,
-    GREENPLUM_SQL_COLUMNS,
     GREENPLUM_TABLE_COMMENTS,
     GREENPLUM_VIEW_DEFINITIONS,
+    GREENPLUM_SCHEMA_COLUMNS,
 )
 from metadata.utils.sqlalchemy_utils import (
     get_table_comment_wrapper,
@@ -53,11 +54,25 @@ def get_columns(  # pylint: disable=too-many-locals
     """
     Overriding the dialect method to add raw_data_type in response
     """
+    if schema is None:
+        return []
 
-    table_oid = self.get_table_oid(
-        connection, table_name, schema, info_cache=kw.get("info_cache")
-    )
+    if (
+        not hasattr(self, "_all_schema_columns")
+        or self._all_schema_columns_db != connection.engine.url.database
+    ):
+        self._all_schema_columns = {}
+        self._all_schema_columns_db = connection.engine.url.database
 
+    if schema not in self._all_schema_columns:
+        self._all_schema_columns[schema] = self._get_schema_columns(
+            connection, schema
+        )
+
+    return self._all_schema_columns.get(schema, {}).get((table_name, schema), [])
+
+
+def _get_schema_columns(self, connection, schema):  # pylint: disable=too-many-locals
     generated = (
         "a.attgenerated as generated"
         if self.server_version_info >= (12,)
@@ -70,16 +85,16 @@ def get_columns(  # pylint: disable=too-many-locals
     else:
         identity = "NULL as identity_options"
 
-    sql_col_query = GREENPLUM_SQL_COLUMNS.format(
+    sql_col_query = GREENPLUM_SCHEMA_COLUMNS.format(
         generated=generated,
         identity=identity,
     )
     sql_col_query = (
         sql.text(sql_col_query)
-        .bindparams(sql.bindparam("table_oid", type_=sqltypes.Integer))
+        .bindparams(sql.bindparam("schema", type_=sqltypes.Unicode))
         .columns(attname=sqltypes.Unicode, default=sqltypes.Unicode)
     )
-    conn = connection.execute(sql_col_query, {"table_oid": table_oid})
+    conn = connection.execute(sql_col_query, {"schema": schema})
     rows = conn.fetchall()
 
     # dictionary with (name, ) if default search path or (schema, name)
@@ -93,34 +108,24 @@ def get_columns(  # pylint: disable=too-many-locals
         for rec in self._load_enums(connection, schema="*")
     )
 
-    # format columns
-    columns = []
-
-    for (
-        name,
-        format_type,
-        default_,
-        notnull,
-        table_oid,
-        comment,
-        generated,
-        identity,
-    ) in rows:
+    all_columns = defaultdict(list)
+    for row in rows:
         column_info = self._get_column_info(
-            name,
-            format_type,
-            default_,
-            notnull,
+            row.attname,
+            row.format_type,
+            row.default,
+            row.attnotnull,
             domains,
             enums,
-            schema,
-            comment,
-            generated,
-            identity,
+            row.schema_name,
+            row.comment,
+            row.generated,
+            row.identity_options,
         )
-        column_info["system_data_type"] = format_type
-        columns.append(column_info)
-    return columns
+        column_info["system_data_type"] = row.format_type
+        column_info["ordinal_position"] = row.attnum
+        all_columns[(row.table_name, row.schema_name)].append(column_info)
+    return dict(all_columns)
 
 
 def _get_numeric_args(charlen):
