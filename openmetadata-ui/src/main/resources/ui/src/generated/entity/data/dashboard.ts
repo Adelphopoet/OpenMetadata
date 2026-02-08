@@ -554,6 +554,7 @@ export interface AccessDetails {
  */
 export enum DashboardServiceType {
     CustomDashboard = "CustomDashboard",
+    DataLens = "DataLens",
     DomoDashboard = "DomoDashboard",
     Grafana = "Grafana",
     Hex = "Hex",

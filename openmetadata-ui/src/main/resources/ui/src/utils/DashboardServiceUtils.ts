@@ -18,6 +18,7 @@ import {
   DashboardServiceType,
 } from '../generated/entity/services/dashboardService';
 import customDashboardConnection from '../jsons/connectionSchemas/connections/dashboard/customDashboardConnection.json';
+import dataLensConnection from '../jsons/connectionSchemas/connections/dashboard/dataLensConnection.json';
 import domoDashboardConnection from '../jsons/connectionSchemas/connections/dashboard/domoDashboardConnection.json';
 import grafanaConnection from '../jsons/connectionSchemas/connections/dashboard/grafanaConnection.json';
 import hexConnection from '../jsons/connectionSchemas/connections/dashboard/hexConnection.json';
@@ -62,6 +63,11 @@ export const getDashboardConfig = (type: DashboardServiceType) => {
     }
     case DashboardServiceType.PowerBI: {
       schema = powerBIConnection;
+
+      break;
+    }
+    case DashboardServiceType.DataLens: {
+      schema = dataLensConnection;
 
       break;
     }

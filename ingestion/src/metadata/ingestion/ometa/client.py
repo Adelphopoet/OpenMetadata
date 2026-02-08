@@ -134,6 +134,7 @@ class REST:
         self._base_url: URL = URL(self.config.base_url)
         self._api_version = get_api_version(self.config.api_version)
         self._session = requests.Session()
+        self._last_response_headers: Optional[dict] = None
         self._use_raw_data = self.config.raw_data
         self._retry = self.config.retry
         self._retry_wait = self.config.retry_wait
@@ -258,6 +259,7 @@ class REST:
         limit_codes = self._limit_codes
         try:
             resp = self._session.request(method, url, **opts)
+            self._last_response_headers = resp.headers
             resp.raise_for_status()
 
             if resp.text != "":
