@@ -47,6 +47,7 @@ import {
   DATABASE_DEFAULT,
   DATABRICK,
   DATALAKE,
+  DATALENS,
   DBT,
   DEFAULT_SERVICE,
   DELTALAKE,
@@ -554,6 +555,9 @@ class ServiceUtilClassBase {
 
       case this.DashboardServiceTypeSmallCase.CustomDashboard:
         return DASHBOARD_DEFAULT;
+
+      case this.DashboardServiceTypeSmallCase.DataLens:
+        return DATALENS;
 
       case this.DashboardServiceTypeSmallCase.Superset:
         return SUPERSET;
