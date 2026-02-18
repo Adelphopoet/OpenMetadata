@@ -40,6 +40,7 @@ import { ConfigData, ServicesType } from '../../interface/service.interface';
 import { triggerOnDemandApp } from '../../rest/applicationAPI';
 import { postService } from '../../rest/serviceAPI';
 import { getServiceLogo } from '../../utils/CommonUtils';
+import { normalizeDataLensAuthConfig } from '../../utils/DataLensConnectionUtils';
 import { getEntityFeedLink } from '../../utils/EntityUtils';
 import { handleEntityCreationError } from '../../utils/formUtils';
 import { translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
@@ -183,13 +184,20 @@ const AddServicePage = () => {
   // Filters Input step
   const handleFiltersInputBackClick = () => setActiveServiceStep(3);
   const handleFiltersInputNextClick = async (config: ConfigData) => {
+    const mergedConfig = {
+      ...serviceConfig.connection.config,
+      ...config,
+    } as ConfigData;
+    const normalizedConfig =
+      normalizeDataLensAuthConfig(
+        serviceConfig.serviceType,
+        mergedConfig,
+        true
+      ) ?? mergedConfig;
     const configData = {
       ...serviceConfig,
       connection: {
-        config: {
-          ...serviceConfig.connection.config,
-          ...config,
-        },
+        config: normalizedConfig,
       },
     };
     setSaveServiceState('waiting');
@@ -203,6 +211,13 @@ const AddServicePage = () => {
       ) {
         await triggerTheAutoPilotApplication(serviceDetails);
       }
+
+      navigate(
+        getServiceDetailsPath(
+          serviceDetails.fullyQualifiedName ?? configData.name,
+          serviceCategory
+        )
+      );
     } catch (error) {
       handleEntityCreationError({
         error: error as AxiosError,
@@ -215,7 +230,6 @@ const AddServicePage = () => {
       });
     } finally {
       setSaveServiceState('initial');
-      navigate(getServiceDetailsPath(configData.name, serviceCategory));
     }
   };
 
