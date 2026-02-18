@@ -36,6 +36,8 @@ const WidgetSortFilter = ({
   isEditView = false,
 }: WidgetSortFilterProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const selectedSortLabel =
+    sortOptions.find((option) => option.key === selectedSortBy)?.label ?? '';
 
   const handleSortByClick = (e: MenuInfo) => {
     if (!isEditView) {
@@ -66,7 +68,7 @@ const WidgetSortFilter = ({
       <Button
         className="widget-sort-by-dropdown"
         data-testid="widget-sort-by-dropdown">
-        {sortOptions.find((option) => option.key === selectedSortBy)?.label}
+        <span className="widget-sort-filter-label">{selectedSortLabel}</span>
         {isOpen ? (
           <UpOutlined className="widget-sort-filter-icon" />
         ) : (
