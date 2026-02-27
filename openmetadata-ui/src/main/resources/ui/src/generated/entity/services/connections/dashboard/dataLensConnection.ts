@@ -45,7 +45,11 @@ export interface DataLensConnection {
     /**
      * IAM token for DataLens API access.
      */
-    iamToken: string;
+    iamToken?: string;
+    /**
+     * Service account authorized key JSON. If provided, IAM token will be generated automatically at ingestion start.
+     */
+    serviceAccountJson?: string;
     /**
      * Organization ID for DataLens API access.
      */

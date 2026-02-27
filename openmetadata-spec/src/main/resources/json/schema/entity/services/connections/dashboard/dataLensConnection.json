@@ -40,6 +40,12 @@
       "type": "string",
       "format": "password"
     },
+    "serviceAccountJson": {
+      "title": "Service Account JSON",
+      "description": "Service account authorized key JSON. If provided, IAM token will be generated automatically at ingestion start.",
+      "type": "string",
+      "format": "password"
+    },
     "organizationId": {
       "title": "Organization ID",
       "description": "Organization ID for DataLens API access.",
@@ -121,6 +127,14 @@
       "$ref": "../connectionBasicType.json#/definitions/supportsMetadataExtraction"
     }
   },
+  "anyOf": [
+    {
+      "required": ["iamToken"]
+    },
+    {
+      "required": ["serviceAccountJson"]
+    }
+  ],
   "additionalProperties": false,
-  "required": ["iamToken", "organizationId"]
+  "required": ["organizationId"]
 }

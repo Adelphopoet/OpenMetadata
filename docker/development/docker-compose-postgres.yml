@@ -20,7 +20,7 @@ services:
     build:
       context: ../../.
       dockerfile: docker/postgresql/Dockerfile_postgres
-    container_name: openmetadata_postgresql
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_postgresql
     restart: always
     command: "--work_mem=10MB"
     depends_on:
@@ -44,7 +44,7 @@ services:
 
   opensearch:
     image: opensearchproject/opensearch:latest
-    container_name: openmetadata_opensearch
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_opensearch
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms1024m -Xmx1024m
@@ -71,7 +71,7 @@ services:
     build:
       context: ../../.
       dockerfile: docker/development/Dockerfile
-    container_name: execute_migrate_all
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_execute_migrate_all
     command: "./bootstrap/openmetadata-ops.sh -d migrate --force"
     environment:
       OPENMETADATA_CLUSTER_NAME: ${OPENMETADATA_CLUSTER_NAME:-openmetadata}
@@ -302,7 +302,7 @@ services:
     build:
       context: ../../.
       dockerfile: docker/development/Dockerfile
-    container_name: openmetadata_server
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_server
     environment:
       OPENMETADATA_CLUSTER_NAME: ${OPENMETADATA_CLUSTER_NAME:-openmetadata}
       SERVER_PORT: ${SERVER_PORT:-8585}
@@ -506,7 +506,7 @@ services:
       dockerfile: ingestion/Dockerfile.ci
       args:
         INGESTION_DEPENDENCY: ${INGESTION_DEPENDENCY:-all}
-    container_name: openmetadata_ingestion
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_ingestion
     environment:
       AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
       AIRFLOW__CORE__EXECUTOR: LocalExecutor

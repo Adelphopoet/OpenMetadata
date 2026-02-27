@@ -24,22 +24,62 @@ from metadata.generated.schema.entity.services.connections.testConnectionResult 
 )
 from metadata.ingestion.connections.test_connections import test_connection_steps
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.ingestion.source.dashboard.datalens.auth import resolve_iam_token
 from metadata.ingestion.source.dashboard.datalens.client import DataLensApiClient
 from metadata.utils.constants import THREE_MIN
 
 
+def _resolve_connection_model(connection: DataLensConnection):
+    """
+    DataLensConnection can come as a RootModel (connection.root).
+    Normalize to the inner model with actual fields.
+    """
+    return getattr(connection, "root", connection)
+
+
+def _resolve_service_type(service_connection: DataLensConnection) -> str:
+    """
+    Return DataLens service type from the model when available.
+    Fallback to literal value for backward compatibility.
+    """
+    connection = _resolve_connection_model(service_connection)
+    connection_type = getattr(connection, "type", None)
+    if hasattr(connection_type, "value"):
+        return connection_type.value
+    if isinstance(connection_type, str):
+        return connection_type
+    return "DataLens"
+
+
 def get_connection(connection: DataLensConnection) -> DataLensApiClient:
     """Create connection to DataLens"""
+    connection = _resolve_connection_model(connection)
+    verify_ssl = connection.verifySSL if connection.verifySSL is not None else True
+    timeout = getattr(connection, "timeout", None)
+    iam_token = resolve_iam_token(
+        iam_token=(
+            connection.iamToken.get_secret_value() if connection.iamToken else None
+        ),
+        service_account_json=(
+            connection.serviceAccountJson.get_secret_value()
+            if getattr(connection, "serviceAccountJson", None)
+            else None
+        ),
+        verify_ssl=verify_ssl,
+        timeout=timeout or 30,
+    )
+
     return DataLensApiClient(
         api_url=connection.apiURL,
-        iam_token=connection.iamToken.get_secret_value(),
+        iam_token=iam_token,
         organization_id=connection.organizationId,
         api_version=connection.apiVersion or "1",
-        verify_ssl=connection.verifySSL if connection.verifySSL is not None else True,
+        verify_ssl=verify_ssl,
         page_size=connection.pageSize or 100,
         request_delay_seconds=getattr(connection, "requestDelaySeconds", 0.2),
         rate_limit_retry_seconds=getattr(connection, "rateLimitRetrySeconds", 60),
         rate_limit_max_retries=getattr(connection, "rateLimitMaxRetries", 3),
+        timeout=timeout,
     )
 
 
@@ -62,7 +102,7 @@ def test_connection(
     return test_connection_steps(
         metadata=metadata,
         test_fn=test_fn,
-        service_type=service_connection.type.value,
+        service_type=_resolve_service_type(service_connection),
         automation_workflow=automation_workflow,
         timeout_seconds=timeout_seconds,
     )

@@ -29,6 +29,10 @@ import { DriveServiceType } from '../generated/entity/services/driveService';
 import { MetadataServiceType } from '../generated/entity/services/metadataService';
 import { Type as SecurityServiceType } from '../generated/entity/services/securityService';
 import { ConfigData, ServicesType } from '../interface/service.interface';
+import {
+  toDataLensUiAuthConfig,
+  toDataLensUiConnectionSchema,
+} from './DataLensConnectionUtils';
 import serviceUtilClassBase from './ServiceUtilClassBase';
 
 export const getConnectionSchemas = ({
@@ -55,6 +59,20 @@ export const getConnectionSchemas = ({
     if (isNil(value)) {
       delete validConfig[key as keyof ConfigData];
     }
+  }
+
+  if (
+    serviceCategory === ServiceCategory.DASHBOARD_SERVICES &&
+    serviceType === DashboardServiceType.DataLens
+  ) {
+    const uiConfig = toDataLensUiAuthConfig(
+      serviceType,
+      validConfig as ConfigData
+    );
+    Object.keys(validConfig).forEach((key) => {
+      delete validConfig[key as keyof ConfigData];
+    });
+    Object.assign(validConfig, uiConfig ?? {});
   }
 
   switch (serviceCategory) {
@@ -138,6 +156,15 @@ export const getConnectionSchemas = ({
 
       break;
     }
+  }
+
+  if (
+    serviceCategory === ServiceCategory.DASHBOARD_SERVICES &&
+    serviceType === DashboardServiceType.DataLens
+  ) {
+    connSch.schema =
+      (toDataLensUiConnectionSchema(serviceType, connSch.schema) ??
+        connSch.schema) as Record<string, unknown>;
   }
 
   return { connSch, validConfig };
