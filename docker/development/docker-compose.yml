@@ -30,7 +30,7 @@ services:
     expose:
       - 3306
     ports:
-      - "3306:3306"
+      - "${OM_LOCAL_MYSQL_PORT:-3306}:3306"
     networks:
       - local_app_net
     healthcheck:

@@ -64,6 +64,8 @@ default_compose_project="${default_compose_project}-local"
 
 export COMPOSE_PROJECT_NAME="${OM_LOCAL_COMPOSE_PROJECT_NAME:-$default_compose_project}"
 export OM_LOCAL_CONTAINER_PREFIX="${OM_LOCAL_CONTAINER_PREFIX:-$COMPOSE_PROJECT_NAME}"
+export OM_LOCAL_POSTGRES_PORT="${OM_LOCAL_POSTGRES_PORT:-55433}"
+export OM_LOCAL_MYSQL_PORT="${OM_LOCAL_MYSQL_PORT:-53306}"
 echo "Using docker compose project [$COMPOSE_PROJECT_NAME] with container prefix [$OM_LOCAL_CONTAINER_PREFIX]"
 
 echo "Stopping any previous Local Docker Containers"
