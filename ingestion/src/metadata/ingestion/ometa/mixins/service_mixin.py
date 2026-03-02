@@ -39,6 +39,21 @@ class OMetaServiceMixin:
 
     config: OpenMetadataConnection
 
+    @staticmethod
+    def _get_service_type_value(connection_config: BaseModel) -> str:
+        """
+        Resolve service type from both regular connection models and RootModel wrappers.
+        """
+        config_model = getattr(connection_config, "root", connection_config)
+        service_type = getattr(config_model, "type", None)
+        if hasattr(service_type, "value"):
+            return service_type.value
+        if isinstance(service_type, str):
+            return service_type
+        raise ValueError(
+            f"Cannot resolve service type from connection config: {type(connection_config).__name__}"
+        )
+
     def get_create_service_from_source(
         self, entity: Type[T], config: WorkflowSource
     ) -> C:
@@ -53,9 +68,10 @@ class OMetaServiceMixin:
         """
 
         create_entity_class = self.get_create_entity_type(entity=entity)
+        connection_config = config.serviceConnection.root.config
         return create_entity_class(
             name=config.serviceName,
-            serviceType=config.serviceConnection.root.config.type.value,
+            serviceType=self._get_service_type_value(connection_config),
             connection=config.serviceConnection.root
             if self.config.storeServiceConnection
             else None,

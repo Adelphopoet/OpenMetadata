@@ -42,7 +42,14 @@ from metadata.generated.schema.type.basic import (
     FullyQualifiedEntityName,
     Markdown,
     SourceUrl,
+    Uuid,
 )
+from metadata.generated.schema.type.entityLineage import (
+    EntitiesEdge,
+    LineageDetails,
+)
+from metadata.generated.schema.type.entityLineage import Source as LineageSource
+from metadata.generated.schema.type.entityReference import EntityReference
 from metadata.ingestion.api.models import Either
 from metadata.ingestion.api.steps import InvalidSourceException
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
@@ -110,9 +117,10 @@ class DataLensSource(DashboardServiceSource):
     def prepare(self):
         """Fetch the list of dashboards"""
         try:
-            self.dashboard_list = list(
+            dashboard_entries = list(
                 self.client.list_dashboards(include_data=True)
             )
+            self.dashboard_list = self._deduplicate_dashboards(dashboard_entries)
         except Exception as exc:  # pragma: no cover - defensive
             logger.error("Failed to fetch DataLens dashboards: %s", exc)
             self.dashboard_list = []
@@ -144,8 +152,48 @@ class DataLensSource(DashboardServiceSource):
             self._load_workbooks()
         self._load_datasets()
 
+    def _deduplicate_dashboards(self, dashboards: List[dict]) -> List[dict]:
+        deduplicated: List[dict] = []
+        seen_ids: Set[str] = set()
+        duplicates = 0
+        for dashboard in dashboards or []:
+            dashboard_id = self._get_entry_id(dashboard)
+            if not dashboard_id:
+                deduplicated.append(dashboard)
+                continue
+            if dashboard_id in seen_ids:
+                duplicates += 1
+                continue
+            seen_ids.add(dashboard_id)
+            deduplicated.append(dashboard)
+        if duplicates:
+            logger.info("Skipped %s duplicate DataLens dashboards by entryId", duplicates)
+        return deduplicated
+
+    def _build_dashboard_chart_refs(
+        self, chart_ids: Optional[List[str]]
+    ) -> Optional[List[FullyQualifiedEntityName]]:
+        chart_refs: List[FullyQualifiedEntityName] = []
+        seen_chart_ids: Set[str] = set()
+        for chart_id in chart_ids or []:
+            if chart_id in seen_chart_ids:
+                continue
+            seen_chart_ids.add(chart_id)
+            chart_fqn = fqn.build(
+                self.metadata,
+                entity_type=Chart,
+                service_name=self.context.get().dashboard_service,
+                chart_name=chart_id,
+            )
+            # Do not fail dashboard creation if a chart is missing.
+            chart_entity = self.metadata.get_by_name(entity=Chart, fqn=chart_fqn)
+            if chart_entity:
+                chart_refs.append(FullyQualifiedEntityName(chart_fqn))
+        return chart_refs or None
+
     def _get_collection_name_pattern(self) -> Optional[str]:
-        pattern = getattr(self.service_connection, "collectionNamePattern", None)
+        connection = getattr(self.service_connection, "root", self.service_connection)
+        pattern = getattr(connection, "collectionNamePattern", None)
         if pattern is None:
             return None
         try:
@@ -155,7 +203,8 @@ class DataLensSource(DashboardServiceSource):
         return pattern or None
 
     def _get_only_dashboards_in_collections(self) -> bool:
-        value = getattr(self.service_connection, "onlyDashboardsInCollections", None)
+        connection = getattr(self.service_connection, "root", self.service_connection)
+        value = getattr(connection, "onlyDashboardsInCollections", None)
         if value is None:
             return False
         return bool(value)
@@ -504,7 +553,8 @@ class DataLensSource(DashboardServiceSource):
             url = links.get("self") or links.get("public")
             if url:
                 return SourceUrl(url)
-        host_port = self.service_connection.hostPort
+        connection = getattr(self.service_connection, "root", self.service_connection)
+        host_port = getattr(connection, "hostPort", None)
         if host_port and entry.get("entryId"):
             base = clean_uri(host_port)
             return SourceUrl(f"{base}/?entryId={entry.get('entryId')}")
@@ -538,17 +588,7 @@ class DataLensSource(DashboardServiceSource):
                 name=EntityName(dashboard_name),
                 displayName=display_name,
                 description=Markdown(description) if description else None,
-                charts=[
-                    FullyQualifiedEntityName(
-                        fqn.build(
-                            self.metadata,
-                            entity_type=Chart,
-                            service_name=self.context.get().dashboard_service,
-                            chart_name=chart,
-                        )
-                    )
-                    for chart in self.context.get().charts or []
-                ],
+                charts=self._build_dashboard_chart_refs(self.context.get().charts),
                 service=FullyQualifiedEntityName(self.context.get().dashboard_service),
                 sourceUrl=self._get_source_url(entry),
                 project=project,
@@ -662,6 +702,27 @@ class DataLensSource(DashboardServiceSource):
             )
         return columns
 
+    def _get_data_model_type(self) -> str:
+        """
+        Keep compatibility with repositories where generated schemas
+        do not include DataLensDataset yet.
+        """
+        if hasattr(DataModelType, "DataLensDataset"):
+            return DataModelType.DataLensDataset.value
+        return DataModelType.SupersetDataModel.value
+
+    def _get_service_type_value(self) -> str:
+        """
+        Return service type from connection with backward-compatible fallback.
+        """
+        connection = getattr(self.service_connection, "root", self.service_connection)
+        service_type = getattr(connection, "type", None)
+        if hasattr(service_type, "value"):
+            return service_type.value
+        if isinstance(service_type, str):
+            return service_type
+        return "DataLens"
+
     def yield_bulk_datamodel(
         self, dataset_entry: dict
     ) -> Iterable[Either[CreateDashboardDataModelRequest]]:
@@ -705,8 +766,8 @@ class DataLensSource(DashboardServiceSource):
                 service=FullyQualifiedEntityName(
                     self.context.get().dashboard_service
                 ),
-                dataModelType=DataModelType.DataLensDataset.value,
-                serviceType=self.service_connection.type.value,
+                dataModelType=self._get_data_model_type(),
+                serviceType=self._get_service_type_value(),
                 columns=self._get_dataset_columns(dataset_read),
                 project=self._get_project_from_entry(entry),
                 sourceUrl=self._get_source_url(entry) if entry else None,
@@ -820,11 +881,12 @@ class DataLensSource(DashboardServiceSource):
                 dashboard_name=dashboard_name,
             )
             dashboard_entity = self.metadata.get_by_name(
-                entity=LineageDashboard, fqn=dashboard_fqn
+                entity=LineageDashboard, fqn=dashboard_fqn, fields=["charts"]
             )
             if not dashboard_entity:
                 return []
 
+            yielded_chart_ids: Set[str] = set()
             for chart in self.context.get().charts or []:
                 try:
                     chart_fqn = fqn.build(
@@ -837,8 +899,25 @@ class DataLensSource(DashboardServiceSource):
                         entity=Chart, fqn=chart_fqn
                     )
                     if chart_entity:
-                        lineage = self._get_add_lineage_request(
-                            to_entity=dashboard_entity, from_entity=chart_entity
+                        chart_id = str(chart_entity.id.root)
+                        if chart_id in yielded_chart_ids:
+                            continue
+                        yielded_chart_ids.add(chart_id)
+                        lineage = Either(
+                            right=AddLineageRequest(
+                                edge=EntitiesEdge(
+                                    fromEntity=EntityReference(
+                                        id=Uuid(chart_entity.id.root), type="chart"
+                                    ),
+                                    toEntity=EntityReference(
+                                        id=Uuid(dashboard_entity.id.root),
+                                        type="dashboard",
+                                    ),
+                                    lineageDetails=LineageDetails(
+                                        source=LineageSource.DashboardLineage
+                                    ),
+                                )
+                            )
                         )
                         if lineage:
                             yield lineage
@@ -847,6 +926,39 @@ class DataLensSource(DashboardServiceSource):
                         left=StackTraceError(
                             name="Lineage",
                             error=f"Error linking chart lineage {chart}: {exc}",
+                            stackTrace=traceback.format_exc(),
+                        )
+                    )
+            chart_refs = getattr(dashboard_entity.charts, "root", dashboard_entity.charts)
+            for chart_ref in chart_refs or []:
+                try:
+                    if not chart_ref.id:
+                        continue
+                    chart_id = str(chart_ref.id.root)
+                    if chart_id in yielded_chart_ids:
+                        continue
+                    yielded_chart_ids.add(chart_id)
+                    lineage = Either(
+                        right=AddLineageRequest(
+                            edge=EntitiesEdge(
+                                fromEntity=EntityReference(
+                                    id=Uuid(chart_ref.id.root), type="chart"
+                                ),
+                                toEntity=EntityReference(
+                                    id=Uuid(dashboard_entity.id.root), type="dashboard"
+                                ),
+                                lineageDetails=LineageDetails(
+                                    source=LineageSource.DashboardLineage
+                                ),
+                            )
+                        )
+                    )
+                    yield lineage
+                except Exception as exc:
+                    yield Either(
+                        left=StackTraceError(
+                            name="Lineage",
+                            error=f"Error linking chart lineage {chart_ref}: {exc}",
                             stackTrace=traceback.format_exc(),
                         )
                     )

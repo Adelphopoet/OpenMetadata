@@ -41,6 +41,7 @@ import { SearchSourceAlias } from '../../interface/search.interface';
 import { ConfigData, ServicesType } from '../../interface/service.interface';
 import { getServiceByFQN, patchService } from '../../rest/serviceAPI';
 import { getEntityMissingError, getServiceLogo } from '../../utils/CommonUtils';
+import { normalizeDataLensAuthConfig } from '../../utils/DataLensConnectionUtils';
 import { getEntityName } from '../../utils/EntityUtils';
 import { translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
 import { getPathByServiceFQN, getSettingPath } from '../../utils/RouterUtils';
@@ -85,9 +86,15 @@ function EditConnectionFormPage() {
   );
 
   const handleConfigSave = (updatedData: ConfigData) => {
+    const normalizedData =
+      normalizeDataLensAuthConfig(
+        serviceDetails?.serviceType ?? '',
+        updatedData,
+        true
+      ) ?? updatedData;
     const configData = serviceUtilClassBase.getEditConfigData(
       serviceDetails,
-      updatedData
+      normalizedData
     );
 
     setServiceConfig(configData);
@@ -103,11 +110,21 @@ function EditConnectionFormPage() {
       ...serviceDetails,
       ...serviceConfig,
       connection: {
-        config: {
-          ...serviceDetails?.connection?.config,
-          ...serviceConfig?.connection?.config,
-          ...updatedData,
-        },
+        config:
+          normalizeDataLensAuthConfig(
+            serviceDetails.serviceType,
+            {
+              ...serviceDetails?.connection?.config,
+              ...serviceConfig?.connection?.config,
+              ...updatedData,
+            } as ConfigData,
+            true
+          ) ??
+          ({
+            ...serviceDetails?.connection?.config,
+            ...serviceConfig?.connection?.config,
+            ...updatedData,
+          } as ConfigData),
       },
     };
 

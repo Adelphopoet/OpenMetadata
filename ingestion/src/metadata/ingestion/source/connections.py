@@ -47,19 +47,25 @@ def _get_connection_class_from_spec(
         import_connection_class,
     )
 
-    connection_type = getattr(connection, "type", None)
+    connection_model = getattr(connection, "root", connection)
+    connection_type = getattr(connection_model, "type", None)
     if connection_type:
-        service_type = get_service_type_from_source_type(connection_type.value)
+        connection_type_value = (
+            connection_type.value
+            if hasattr(connection_type, "value")
+            else str(connection_type)
+        )
+        service_type = get_service_type_from_source_type(connection_type_value)
         try:
-            spec = BaseSpec.get_for_source(service_type, connection_type.value.lower())
+            spec = BaseSpec.get_for_source(service_type, connection_type_value.lower())
             if getattr(spec, "connection_class", None):
                 connection_class = import_connection_class(
-                    service_type, connection_type.value.lower()
+                    service_type, connection_type_value.lower()
                 )
                 return connection_class
         except Exception:
             logger.error(
-                f"Error importing connection class for {connection_type.value}"
+                f"Error importing connection class for {connection_type_value}"
             )
             logger.debug(traceback.format_exc())
     return None

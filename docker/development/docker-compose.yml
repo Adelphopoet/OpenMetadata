@@ -21,7 +21,7 @@ services:
       context: ../../.
       dockerfile: docker/mysql/Dockerfile_mysql
     command: "--sort_buffer_size=10M"
-    container_name: openmetadata_mysql
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_mysql
     restart: always
     depends_on:
       - elasticsearch
@@ -30,7 +30,7 @@ services:
     expose:
       - 3306
     ports:
-      - "3306:3306"
+      - "${OM_LOCAL_MYSQL_PORT:-3306}:3306"
     networks:
       - local_app_net
     healthcheck:
@@ -43,7 +43,7 @@ services:
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.4
-    container_name: openmetadata_elasticsearch
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_elasticsearch
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms1024m -Xmx1024m
@@ -68,7 +68,7 @@ services:
     build:
       context: ../../.
       dockerfile: docker/development/Dockerfile
-    container_name: execute_migrate_all
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_execute_migrate_all
     command: "./bootstrap/openmetadata-ops.sh -d migrate --force"
     environment:
       OPENMETADATA_CLUSTER_NAME: ${OPENMETADATA_CLUSTER_NAME:-openmetadata}
@@ -295,7 +295,7 @@ services:
     build:
       context: ../../.
       dockerfile: docker/development/Dockerfile
-    container_name: openmetadata_server
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_server
     environment:
       OPENMETADATA_CLUSTER_NAME: ${OPENMETADATA_CLUSTER_NAME:-openmetadata}
       SERVER_PORT: ${SERVER_PORT:-8585}
@@ -506,7 +506,7 @@ services:
       dockerfile: ingestion/Dockerfile.ci
       args:
         INGESTION_DEPENDENCY: ${INGESTION_DEPENDENCY:-all}
-    container_name: openmetadata_ingestion
+    container_name: ${OM_LOCAL_CONTAINER_PREFIX:-openmetadata}_ingestion
     environment:
       AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
       AIRFLOW__CORE__EXECUTOR: LocalExecutor

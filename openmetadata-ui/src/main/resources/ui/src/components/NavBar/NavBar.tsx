@@ -437,7 +437,7 @@ const NavBar = () => {
 
   return (
     <>
-      <Header>
+      <Header className="om-navbar">
         <div className="navbar-container">
           <div className="flex-center">
             <Tooltip

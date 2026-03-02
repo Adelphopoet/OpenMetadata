@@ -43,6 +43,7 @@ import {
 } from '../../../generated/entity/automations/workflow';
 import { TestConnectionStep } from '../../../generated/entity/services/connections/testConnectionDefinition';
 import useAbortController from '../../../hooks/AbortController/useAbortController';
+import { ConfigData } from '../../../interface/service.interface';
 import {
   addWorkflow,
   deleteWorkflowById,
@@ -51,6 +52,7 @@ import {
   triggerWorkflowById,
 } from '../../../rest/workflowAPI';
 import { Transi18next } from '../../../utils/CommonUtils';
+import { normalizeDataLensAuthConfig } from '../../../utils/DataLensConnectionUtils';
 import { formatFormDataForSubmit } from '../../../utils/JSONSchemaFormUtils';
 import {
   getServiceType,
@@ -272,7 +274,14 @@ const TestConnection: FC<TestConnectionProps> = ({
     setMessage(t(TEST_CONNECTION_TESTING_MESSAGE));
     handleResetState();
 
-    const updatedFormData = formatFormDataForSubmit(getData());
+    const formDataForSubmit = formatFormDataForSubmit(
+      getData()
+    ) as ConfigObject;
+    const updatedFormData =
+      normalizeDataLensAuthConfig(
+        connectionType,
+        formDataForSubmit as unknown as ConfigData
+      ) ?? formDataForSubmit;
 
     // current interval id
     const intervalObject: {
