@@ -26,6 +26,7 @@ import java.security.KeyStoreException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import javax.net.ssl.SSLContext;
 import lombok.extern.slf4j.Slf4j;
@@ -256,12 +257,9 @@ public class AirflowRESTClient extends PipelineServiceClient {
     HttpResponse<String> response =
         client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
-    // If we get a 400 with CSRF token expired error, clear the token and retry once
-    if (authenticate
-        && response.statusCode() == 400
-        && response.body() != null
-        && response.body().contains("CSRF token")) {
-      LOG.warn("CSRF token expired, refreshing and retrying request");
+    // If CSRF token/session is stale or missing, clear and retry once
+    if (authenticate && isCsrfErrorResponse(response)) {
+      LOG.warn("CSRF validation failed, refreshing token/session and retrying request");
       clearCsrfToken();
       fetchCsrfTokenIfNeeded();
 
@@ -716,11 +714,9 @@ public class AirflowRESTClient extends PipelineServiceClient {
     HttpRequest request = authenticatedRequestBuilder(url).DELETE().build();
     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    // If we get a 400 with CSRF token expired error, clear the token and retry once
-    if (response.statusCode() == 400
-        && response.body() != null
-        && response.body().contains("CSRF token has expired")) {
-      LOG.warn("CSRF token expired, refreshing and retrying DELETE request");
+    // If CSRF token/session is stale or missing, clear and retry once
+    if (isCsrfErrorResponse(response)) {
+      LOG.warn("CSRF validation failed, refreshing token/session and retrying DELETE request");
       clearCsrfToken();
       fetchCsrfTokenIfNeeded();
       request = authenticatedRequestBuilder(url).DELETE().build();
@@ -747,6 +743,13 @@ public class AirflowRESTClient extends PipelineServiceClient {
     }
 
     return builder;
+  }
+
+  private boolean isCsrfErrorResponse(HttpResponse<String> response) {
+    if (response == null || response.statusCode() != 400 || response.body() == null) {
+      return false;
+    }
+    return response.body().toLowerCase(Locale.ROOT).contains("csrf");
   }
 
   /**

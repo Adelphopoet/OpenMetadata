@@ -11,11 +11,57 @@
  *  limitations under the License.
  */
 
+import antlr4 from 'antlr4';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/index';
 import { getBasePath } from './utils/HistoryUtils';
+
+const patchAntlrDeserializer = () => {
+  const deserializer = antlr4?.atn?.ATNDeserializer;
+  const proto = deserializer?.prototype as
+    | (typeof antlr4.atn.ATNDeserializer.prototype & {
+        __omPatched?: boolean;
+      })
+    | undefined;
+
+  if (!proto || proto.__omPatched) {
+    return;
+  }
+
+  const originalReset = proto.reset;
+
+  const toLegacyString = (data: ArrayLike<number>) => {
+    let out = '';
+    const chunkSize = 16384;
+    for (let i = 0; i < data.length; i += chunkSize) {
+      const chunk = Array.prototype.slice.call(data, i, i + chunkSize);
+      out += String.fromCharCode.apply(null, chunk);
+    }
+
+    return out;
+  };
+
+  proto.reset = function reset(data: unknown) {
+    if (
+      data &&
+      typeof data !== 'string' &&
+      (Array.isArray(data) || ArrayBuffer.isView(data))
+    ) {
+      const first = (data as ArrayLike<number>)[0];
+      if (first === 3) {
+        data = toLegacyString(data as ArrayLike<number>);
+      }
+    }
+
+    return originalReset.call(this, data as never);
+  };
+
+  proto.__omPatched = true;
+};
+
+patchAntlrDeserializer();
 
 const container = document.getElementById('root');
 if (!container) {

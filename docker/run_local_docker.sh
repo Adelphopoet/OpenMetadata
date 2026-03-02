@@ -54,6 +54,20 @@ echo "Running local docker using mode [$mode] database [$database] and skipping 
 
 cd ../
 
+repo_dir_name=$(basename "$PWD")
+default_compose_project=$(echo "$repo_dir_name" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-')
+default_compose_project=${default_compose_project%-}
+if [[ -z "$default_compose_project" ]]; then
+  default_compose_project="openmetadata"
+fi
+default_compose_project="${default_compose_project}-local"
+
+export COMPOSE_PROJECT_NAME="${OM_LOCAL_COMPOSE_PROJECT_NAME:-$default_compose_project}"
+export OM_LOCAL_CONTAINER_PREFIX="${OM_LOCAL_CONTAINER_PREFIX:-$COMPOSE_PROJECT_NAME}"
+export OM_LOCAL_POSTGRES_PORT="${OM_LOCAL_POSTGRES_PORT:-55433}"
+export OM_LOCAL_MYSQL_PORT="${OM_LOCAL_MYSQL_PORT:-53306}"
+echo "Using docker compose project [$COMPOSE_PROJECT_NAME] with container prefix [$OM_LOCAL_CONTAINER_PREFIX]"
+
 echo "Stopping any previous Local Docker Containers"
 docker compose -f docker/development/docker-compose-postgres.yml down --remove-orphans
 docker compose -f docker/development/docker-compose.yml down --remove-orphans
@@ -290,4 +304,3 @@ curl --location --request POST 'http://localhost:8585/api/v1/apps/trigger/Search
 sleep 60 # Sleep for 60 seconds to make sure the elasticsearch reindexing from UI finishes
 tput setaf 2
 echo "✔ OpenMetadata is up and running"
-

@@ -19,6 +19,7 @@ import { ServiceCategory } from '../../enums/service.enum';
 import { triggerOnDemandApp } from '../../rest/applicationAPI';
 import { postService } from '../../rest/serviceAPI';
 import { getServiceLogo } from '../../utils/CommonUtils';
+import { handleEntityCreationError } from '../../utils/formUtils';
 import { getSettingPath } from '../../utils/RouterUtils';
 import * as serviceUtilClassBaseModule from '../../utils/ServiceUtilClassBase';
 import {
@@ -183,6 +184,10 @@ jest.mock('../../utils/ServiceUtils', () => ({
 
 jest.mock('../../utils/ToastUtils', () => ({
   showErrorToast: jest.fn(),
+}));
+
+jest.mock('../../utils/formUtils', () => ({
+  handleEntityCreationError: jest.fn(),
 }));
 
 const baseAirflowMock = {
@@ -415,5 +420,41 @@ describe('AddServicePage', () => {
     render(<AddServicePage {...mockProps} />, { wrapper: MemoryRouter });
 
     expect(mockGetExtraInfo).toHaveBeenCalled();
+  });
+
+  it('should not navigate to service details if service creation fails', async () => {
+    (postService as jest.Mock).mockRejectedValueOnce(new Error('failed'));
+
+    await act(async () => {
+      render(<AddServicePage {...mockProps} />, { wrapper: MemoryRouter });
+    });
+
+    const selectMySQLButton = screen.getByText('Select MySQL');
+    await act(async () => {
+      fireEvent.click(selectMySQLButton);
+    });
+
+    const nextButton = screen.getByText('Next');
+    await act(async () => {
+      fireEvent.click(nextButton);
+    });
+
+    const configureButton = screen.getByText('Configure Service');
+    await act(async () => {
+      fireEvent.click(configureButton);
+    });
+
+    const saveConnectionButton = screen.getByText('Save Connection');
+    await act(async () => {
+      fireEvent.click(saveConnectionButton);
+    });
+
+    const saveFiltersButton = screen.getByText('Save Filters');
+    await act(async () => {
+      fireEvent.click(saveFiltersButton);
+    });
+
+    expect(handleEntityCreationError).toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalledWith('/service/details/path');
   });
 });

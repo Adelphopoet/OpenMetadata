@@ -104,6 +104,7 @@ import logo from '../assets/svg/logo-monogram.svg';
 import openSearch from '../assets/svg/open-search.svg';
 import pipelineDefault from '../assets/svg/pipeline.svg';
 import securitySafe from '../assets/svg/security-safe.svg';
+import datalens from '../assets/svg/service-icon-datalens.svg';
 import googleDrive from '../assets/svg/service-icon-google-drive.svg';
 import hex from '../assets/svg/service-icon-hex.svg';
 import mlflow from '../assets/svg/service-icon-mlflow.svg';
@@ -179,6 +180,7 @@ export const DEFAULT_SERVICE = iconDefaultService;
 export const AIRBYTE = airbyte;
 export const PINOT = pinot;
 export const DATALAKE = datalake;
+export const DATALENS = datalens;
 export const MODE = mode;
 export const DAGSTER = dagster;
 export const DBT = dbt;
@@ -541,6 +543,7 @@ export const SERVICE_TYPE_WITH_DISPLAY_NAME = new Map<string, string>([
   [PipelineServiceType.GluePipeline, 'Glue Pipeline'],
   [DatabaseServiceType.DomoDatabase, 'Domo Database'],
   [DashboardServiceType.DomoDashboard, 'Domo Dashboard'],
+  [DashboardServiceType.DataLens, 'DataLens'],
   [DashboardServiceType.MicroStrategy, 'Micro Strategy'],
   [DashboardServiceType.PowerBIReportServer, 'PowerBI Report Server'],
   [PipelineServiceType.DatabricksPipeline, 'Databricks Pipeline'],

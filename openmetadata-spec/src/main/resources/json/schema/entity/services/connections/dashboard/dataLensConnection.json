@@ -1,0 +1,140 @@
+{
+  "$id": "https://open-metadata.org/schema/entity/services/connections/dashboard/dataLensConnection.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DataLensConnection",
+  "description": "DataLens Connection Config",
+  "type": "object",
+  "javaType": "org.openmetadata.schema.services.connections.dashboard.DataLensConnection",
+  "definitions": {
+    "dataLensType": {
+      "description": "DataLens service type",
+      "type": "string",
+      "enum": ["DataLens"],
+      "default": "DataLens"
+    }
+  },
+  "properties": {
+    "type": {
+      "title": "Service Type",
+      "description": "Service Type",
+      "$ref": "#/definitions/dataLensType",
+      "default": "DataLens"
+    },
+    "apiURL": {
+      "title": "API URL",
+      "description": "DataLens API base URL.",
+      "type": "string",
+      "format": "uri",
+      "default": "https://api.datalens.tech"
+    },
+    "hostPort": {
+      "expose": true,
+      "title": "Host and Port",
+      "description": "Base URL for the DataLens UI (optional, used for source links).",
+      "type": "string",
+      "format": "uri"
+    },
+    "iamToken": {
+      "title": "IAM Token",
+      "description": "IAM token for DataLens API access.",
+      "type": "string",
+      "format": "password"
+    },
+    "serviceAccountJson": {
+      "title": "Service Account JSON",
+      "description": "Service account authorized key JSON. If provided, IAM token will be generated automatically at ingestion start.",
+      "type": "string",
+      "format": "password"
+    },
+    "organizationId": {
+      "title": "Organization ID",
+      "description": "Organization ID for DataLens API access.",
+      "type": "string"
+    },
+    "apiVersion": {
+      "title": "API Version",
+      "description": "DataLens API version header.",
+      "type": "string",
+      "default": "1"
+    },
+    "pageSize": {
+      "title": "Page Size",
+      "description": "Page size for pagination in API requests. Default is 100.",
+      "type": "integer",
+      "default": 100,
+      "minimum": 1
+    },
+    "collectionNamePattern": {
+      "title": "Collection Name Pattern",
+      "description": "Substring match for collection name. When set, only dashboards from matching collections are ingested.",
+      "type": "string"
+    },
+    "onlyDashboardsInCollections": {
+      "title": "Only Dashboards In Collections",
+      "description": "When enabled, ingest only dashboards that belong to a collection (directly or via workbook).",
+      "type": "boolean",
+      "default": false
+    },
+    "requestDelaySeconds": {
+      "title": "Request Delay (seconds)",
+      "description": "Minimum delay between API requests to avoid rate limiting.",
+      "type": "number",
+      "default": 0.2,
+      "minimum": 0
+    },
+    "rateLimitRetrySeconds": {
+      "title": "Rate Limit Retry (seconds)",
+      "description": "Delay before retrying after a rate limit response.",
+      "type": "integer",
+      "default": 60,
+      "minimum": 1
+    },
+    "rateLimitMaxRetries": {
+      "title": "Rate Limit Max Retries",
+      "description": "Maximum retries after rate limit responses.",
+      "type": "integer",
+      "default": 3,
+      "minimum": 0
+    },
+    "verifySSL": {
+      "title": "Verify SSL",
+      "description": "Boolean marking if we need to verify the SSL certs for DataLens. Default to True.",
+      "type": "boolean",
+      "default": true
+    },
+    "dashboardFilterPattern": {
+      "description": "Regex to exclude or include dashboards that matches the pattern.",
+      "$ref": "../../../../type/filterPattern.json#/definitions/filterPattern",
+      "title": "Default Dashboard Filter Pattern"
+    },
+    "chartFilterPattern": {
+      "description": "Regex exclude or include charts that matches the pattern.",
+      "$ref": "../../../../type/filterPattern.json#/definitions/filterPattern",
+      "title": "Default Chart Filter Pattern"
+    },
+    "dataModelFilterPattern": {
+      "description": "Regex exclude or include data models that matches the pattern.",
+      "$ref": "../../../../type/filterPattern.json#/definitions/filterPattern",
+      "title": "Default Data Model Filter Pattern"
+    },
+    "projectFilterPattern": {
+      "description": "Regex to exclude or include projects that matches the pattern.",
+      "$ref": "../../../../type/filterPattern.json#/definitions/filterPattern",
+      "title": "Default Project Filter Pattern"
+    },
+    "supportsMetadataExtraction": {
+      "title": "Supports Metadata Extraction",
+      "$ref": "../connectionBasicType.json#/definitions/supportsMetadataExtraction"
+    }
+  },
+  "anyOf": [
+    {
+      "required": ["iamToken"]
+    },
+    {
+      "required": ["serviceAccountJson"]
+    }
+  ],
+  "additionalProperties": false,
+  "required": ["organizationId"]
+}

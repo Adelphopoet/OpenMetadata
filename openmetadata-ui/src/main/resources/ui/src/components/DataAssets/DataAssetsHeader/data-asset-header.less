@@ -113,6 +113,19 @@
   .tier-container,
   .extra-info-container {
     max-width: 148px;
+    min-width: 0;
+
+    .ant-typography {
+      min-width: 0;
+      white-space: normal;
+    }
+
+    .extra-info-value {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+    }
   }
   .tier-heading-container {
     svg {
