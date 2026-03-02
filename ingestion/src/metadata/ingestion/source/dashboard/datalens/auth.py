@@ -195,6 +195,14 @@ def resolve_iam_token(
         and normalized_token
         and not ALL_ASTERISKS_REGEX.fullmatch(normalized_token)
     ):
+        try:
+            _parse_service_account_json(normalized_token)
+            return create_iam_token_from_service_account_json(
+                normalized_token, verify_ssl=verify_ssl, timeout=timeout
+            )
+        except ValueError:
+            # Not a service account JSON payload; treat as a plain IAM token.
+            pass
         return normalized_token
 
     normalized_sa_json = (

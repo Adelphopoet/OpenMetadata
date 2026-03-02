@@ -14,12 +14,16 @@ Test import utilities
 """
 from unittest import TestCase
 
+from metadata.generated.schema.entity.services.connections.dashboard.dataLensConnection import (
+    DataLensConnection,
+)
 from metadata.generated.schema.entity.services.serviceType import ServiceType
 from metadata.utils.importer import (
     get_class_name_root,
     get_module_name,
     get_source_module_name,
     import_bulk_sink_type,
+    import_connection_fn,
     import_from_module,
     import_processor_class,
     import_sink_class,
@@ -87,4 +91,20 @@ class ImporterTest(TestCase):
         self.assertEqual(
             import_bulk_sink_type(bulk_sink_type="metadata-usage"),
             MetadataUsageBulkSink,
+        )
+
+    def test_import_connection_fn_with_root_model(self) -> None:
+        connection = DataLensConnection.model_validate(
+            {"organizationId": "org-id", "iamToken": "token"}
+        )
+        test_fn = import_connection_fn(connection, "test_connection")
+        get_conn_fn = import_connection_fn(connection, "get_connection")
+
+        self.assertEqual(
+            test_fn.__module__,
+            "metadata.ingestion.source.dashboard.datalens.connection",
+        )
+        self.assertEqual(
+            get_conn_fn.__module__,
+            "metadata.ingestion.source.dashboard.datalens.connection",
         )

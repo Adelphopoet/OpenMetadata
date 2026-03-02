@@ -208,19 +208,25 @@ def import_connection_fn(connection: BaseModel, function_name: str) -> Callable:
             "The connection is not a pydantic object. Is it really a connection class?"
         )
 
-    connection_type: Optional[Enum] = getattr(connection, "type")
+    connection_model = getattr(connection, "root", connection)
+    connection_type: Optional[Enum] = getattr(connection_model, "type", None)
     if not connection_type:
         raise ValueError(
             f"Cannot get `type` property from connection {connection}. Check the JSON Schema."
         )
 
-    service_type: ServiceType = get_service_type_from_source_type(connection_type.value)
+    connection_type_value = (
+        connection_type.value
+        if isinstance(connection_type, Enum)
+        else str(connection_type)
+    )
+    service_type: ServiceType = get_service_type_from_source_type(connection_type_value)
 
     # module building strings read better with .format instead of f-strings
     # pylint: disable=consider-using-f-string
 
-    if connection.type.value.lower().startswith(CUSTOM_CONNECTOR_PREFIX):
-        python_class_parts = connection.sourcePythonClass.rsplit(".", 1)
+    if connection_type_value.lower().startswith(CUSTOM_CONNECTOR_PREFIX):
+        python_class_parts = connection_model.sourcePythonClass.rsplit(".", 1)
         python_module_path = ".".join(python_class_parts[:-1])
 
         _connection_fn = import_from_module(
@@ -230,7 +236,7 @@ def import_connection_fn(connection: BaseModel, function_name: str) -> Callable:
         _connection_fn = import_from_module(
             "metadata.ingestion.source.{}.{}.connection.{}".format(
                 service_type.name.lower(),
-                connection_type.value.lower(),
+                connection_type_value.lower(),
                 function_name,
             )
         )

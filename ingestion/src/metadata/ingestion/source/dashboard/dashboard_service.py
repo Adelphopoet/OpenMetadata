@@ -238,9 +238,26 @@ class DashboardServiceSource(TopologyRunnerMixin, Source, ABC):
         self.connection_obj = self.client
         self.test_connection()
 
+    def _get_service_connection_type_name(self) -> str:
+        """
+        Resolve connection type name for both regular models and RootModel wrappers.
+        """
+        connection = getattr(self.service_connection, "root", self.service_connection)
+        connection_type = getattr(connection, "type", None)
+        if hasattr(connection_type, "name"):
+            return connection_type.name
+        if hasattr(connection_type, "value"):
+            return str(connection_type.value)
+        if isinstance(connection_type, str):
+            return connection_type
+        class_name = connection.__class__.__name__
+        if class_name.endswith("Connection"):
+            return class_name[: -len("Connection")]
+        return class_name or "Dashboard"
+
     @property
     def name(self) -> str:
-        return self.service_connection.type.name
+        return self._get_service_connection_type_name()
 
     @abstractmethod
     def yield_dashboard(
@@ -488,7 +505,7 @@ class DashboardServiceSource(TopologyRunnerMixin, Source, ABC):
         Method to process the dashboard owners
         """
         logger.debug(
-            f"Processing ownership is not supported for {self.service_connection.type.name}"
+            f"Processing ownership is not supported for {self._get_service_connection_type_name()}"
         )
         return None
 
@@ -647,7 +664,7 @@ class DashboardServiceSource(TopologyRunnerMixin, Source, ABC):
         Get the project / workspace / folder / collection name of the dashboard
         """
         logger.debug(
-            f"Project name is not supported for {self.service_connection.type.name}"
+            f"Project name is not supported for {self._get_service_connection_type_name()}"
         )
         return None
 
@@ -658,7 +675,7 @@ class DashboardServiceSource(TopologyRunnerMixin, Source, ABC):
         Get the project / workspace / folder / collection names of the dashboard
         """
         logger.debug(
-            f"Project names are not supported for {self.service_connection.type.name}"
+            f"Project names are not supported for {self._get_service_connection_type_name()}"
         )
         return None
 
