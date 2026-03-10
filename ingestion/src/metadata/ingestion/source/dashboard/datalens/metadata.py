@@ -139,8 +139,6 @@ class DataLensSource(DashboardServiceSource):
             self._collection_name_pattern or self._only_dashboards_in_collections
         )
         if self._collection_scoped:
-            self.source_config.markDeletedDashboards = False
-            self.source_config.markDeletedDataModels = False
             self._prefetch_scoped_workbooks_collections()
             self.dashboard_list = [
                 dashboard
