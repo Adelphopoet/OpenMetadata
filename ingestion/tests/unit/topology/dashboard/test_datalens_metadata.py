@@ -87,6 +87,39 @@ class TestDataLensMetadata(TestCase):
 
         self.assertTrue(result)
 
+    def test_prepare_collection_scope_does_not_override_mark_deleted_flags(self):
+        source = object.__new__(DataLensSource)
+        source.client = type(
+            "Client",
+            (),
+            {
+                "list_dashboards": lambda _self, include_data=True: [
+                    {"entryId": "dash-1", "collectionId": "col-1"}
+                ]
+            },
+        )()
+        source.source_config = type(
+            "Cfg",
+            (),
+            {"markDeletedDashboards": True, "markDeletedDataModels": True},
+        )()
+        source.dashboard_list = []
+        source._deduplicate_dashboards = lambda dashboards: dashboards
+        source._get_entry_id = lambda dashboard: dashboard.get("entryId")
+        source._get_collection_name_pattern = lambda: "foodtech"
+        source._get_only_dashboards_in_collections = lambda: False
+        source._prefetch_scoped_workbooks_collections = lambda: None
+        source._collection_name_matches = lambda _dashboard: True
+        source._load_collections = lambda: None
+        source._load_workbooks = lambda: None
+        source._load_datasets = lambda: None
+
+        source.prepare()
+
+        self.assertTrue(source._collection_scoped)
+        self.assertTrue(source.source_config.markDeletedDashboards)
+        self.assertTrue(source.source_config.markDeletedDataModels)
+
     def test_yield_dashboard_lineage_uses_dashboard_chart_refs_when_context_empty(self):
         source = object.__new__(DataLensSource)
         dashboard_id = uuid4()
