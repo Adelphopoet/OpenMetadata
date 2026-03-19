@@ -21,8 +21,6 @@ from sqlalchemy.engine.reflection import Inspector
 
 from metadata.generated.schema.entity.data.database import Database
 from metadata.generated.schema.entity.data.table import (
-    PartitionColumnDetails,
-    PartitionIntervalTypes,
     TablePartition,
     TableType,
 )
@@ -41,18 +39,17 @@ from metadata.ingestion.source.database.common_db_source import (
     TableNameAndType,
 )
 from metadata.ingestion.source.database.common_pg_mappings import (
-    INTERVAL_TYPE_MAP,
     RELKIND_MAP,
     ischema_names,
 )
 from metadata.ingestion.source.database.greenplum.queries import (
     GREENPLUM_GET_DB_NAMES,
     GREENPLUM_GET_TABLE_NAMES,
-    GREENPLUM_PARTITION_DETAILS,
 )
 from metadata.ingestion.source.database.greenplum.utils import (
     get_column_info,
     get_columns,
+    _get_schema_columns,
     get_table_comment,
     get_view_definition,
 )
@@ -75,6 +72,7 @@ PGDialect.get_table_comment = get_table_comment
 PGDialect._get_column_info = get_column_info  # pylint: disable=protected-access
 PGDialect.get_view_definition = get_view_definition
 PGDialect.get_columns = get_columns
+PGDialect._get_schema_columns = _get_schema_columns  # pylint: disable=protected-access
 PGDialect.get_all_view_definitions = get_all_view_definitions
 
 PGDialect.ischema_names = ischema_names
@@ -163,26 +161,38 @@ class GreenplumSource(CommonDbSourceService, MultiDBSource):
     def get_table_partition_details(
         self, table_name: str, schema_name: str, inspector: Inspector
     ) -> Tuple[bool, Optional[TablePartition]]:
-        result = self.engine.execute(
-            GREENPLUM_PARTITION_DETAILS.format(
-                table_name=table_name, schema_name=schema_name
-            )
-        ).all()
-
-        if result:
-            partition_details = TablePartition(
-                columns=[
-                    PartitionColumnDetails(
-                        columnName=row.column_name,
-                        intervalType=INTERVAL_TYPE_MAP.get(
-                            result[0].partition_strategy,
-                            PartitionIntervalTypes.COLUMN_VALUE,
-                        ),
-                        interval=None,
-                    )
-                    for row in result
-                    if row.column_name
-                ]
-            )
-            return True, partition_details
+        # Disabled to avoid per-table catalog scans that can block DDL on Greenplum.
         return False, None
+
+    def _get_columns_with_constraints(  # pylint: disable=unused-argument
+        self, schema_name: str, table_name: str, inspector: Inspector
+    ) -> Tuple[list, list, list]:
+        # Skip per-table constraint lookups.
+        return [], [], []
+
+    def get_schema_definition(
+        self,
+        table_type: TableType,
+        table_name: str,
+        schema_name: str,
+        inspector: Inspector,
+    ) -> Optional[str]:
+        # Avoid per-table DDL extraction; keep view definitions (batched).
+        if table_type in (
+            TableType.View,
+            TableType.MaterializedView,
+            TableType.SecureView,
+            TableType.Dynamic,
+            TableType.Stream,
+        ):
+            try:
+                schema_definition = inspector.get_view_definition(
+                    table_name, schema_name
+                )
+                return str(schema_definition).strip() if schema_definition else None
+            except Exception as exc:
+                logger.debug(traceback.format_exc())
+                logger.debug(
+                    f"Failed to fetch view definition for {table_name}: {exc}"
+                )
+        return None

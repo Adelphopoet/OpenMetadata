@@ -136,6 +136,34 @@ GREENPLUM_SQL_COLUMNS = """
         ORDER BY a.attnum
     """
 
+GREENPLUM_SCHEMA_COLUMNS = """
+        SELECT
+            n.nspname as schema_name,
+            c.relname as table_name,
+            a.attname,
+            pg_catalog.format_type(a.atttypid, a.atttypmod) as format_type,
+            (
+            SELECT pg_catalog.pg_get_expr(d.adbin, d.adrelid)
+            FROM pg_catalog.pg_attrdef d
+            WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum
+            AND a.atthasdef
+            ) as default,
+            a.attnotnull,
+            pgd.description as comment,
+            {generated},
+            {identity},
+            a.attnum
+        FROM pg_catalog.pg_attribute a
+        JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        LEFT JOIN pg_catalog.pg_description pgd ON (
+            pgd.objoid = a.attrelid AND pgd.objsubid = a.attnum)
+        WHERE n.nspname = :schema
+        AND c.relkind in ('r', 'p', 'f', 'v', 'm')
+        AND a.attnum > 0 AND NOT a.attisdropped
+        ORDER BY n.nspname, c.relname, a.attnum
+    """
+
 GREENPLUM_GET_SERVER_VERSION = """
 show server_version
 """
